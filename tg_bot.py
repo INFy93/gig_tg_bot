@@ -1,5 +1,3 @@
-import datetime
-import json
 import requests
 import os
 
@@ -9,11 +7,11 @@ from aiogram import Bot, Dispatcher, types, executor
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import StatesGroup, State
-from aiogram.dispatcher.filters import Text
-from aiogram.utils.markdown import hbold, hlink, hunderline, hcode, hspoiler
+from aiogram.utils.markdown import hbold
 
 from config import token
-from hepler import correct_date
+from my_libs.hepler import correct_date
+from my_libs.db import connect, add_user_to_table, check_user
 
 load_dotenv()
 
@@ -33,15 +31,6 @@ async def start(message: types.Message):
     button.add(types.InlineKeyboardButton("Ввести учетные данные", callback_data="login"))
     await message.answer("Добро пожаловать! Чтобы узнать состояние Вашего счета, нажмите на кнопку ниже.",
                          reply_markup=button)
-
-
-@dp.callback_query_handler()
-async def callback(call):
-    if call.data == "login":
-        await start_logging_in(call.message)
-    if call.data == "hear_my_knowledge":
-        await call.message.answer("Обновляю...")
-        await get_info(call.message)
 
 
 @dp.message_handler(commands=["login"], state=None)
@@ -68,12 +57,13 @@ async def get_info(message: types.Message, state=FSMContext):
         'user': data["login"],
         'password': data["password"]
     }
-
+    check_user(login_data["user"])
     req = requests.post(os.getenv('URL'), data=login_data)
 
     data = req.json()
 
     if data != 0:
+        add_user_to_table(data["uid"], login_data["user"], login_data["password"])
         button = types.InlineKeyboardMarkup()
         button.add(types.InlineKeyboardButton("Пополнить счет", callback_data="i_will_have_mora"))
         button.add(types.InlineKeyboardButton("Открыть обещанный платеж", callback_data="turn_to_oblivion"))
@@ -94,6 +84,16 @@ async def get_info(message: types.Message, state=FSMContext):
         fail_button = types.InlineKeyboardMarkup()
         fail_button.add(types.InlineKeyboardButton("Попробовать еще раз", callback_data="login"))
         await message.answer("Неправильный логин или пароль!", reply_markup=fail_button)
+
+
+@dp.callback_query_handler()
+async def callback(call):
+    if call.data == "login":
+        connect()
+        await start_logging_in(call.message)
+    if call.data == "hear_my_knowledge":
+        await call.message.answer("Обновляю...")
+        await get_info(call.message)
 
 
 if __name__ == '__main__':
