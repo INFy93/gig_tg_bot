@@ -11,14 +11,15 @@ def connect():
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
 
-    cur.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, uid int, login varchar(100), '
-                'password varchar(200), login_time timestamp, end_session_time timestamp)')
+    cur.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id int, uid int, '
+                'login varchar(100), login_time timestamp, end_session_time timestamp)')
     conn.commit()
     cur.close()
     conn.close()
 
 
-def add_user_to_table(uid, login, password):
+def add_user_to_table(tg_id, uid, login):
+    tg_id = int(tg_id)
     uid_int = int(uid)
 
     current_date = datetime.datetime.now()
@@ -26,12 +27,19 @@ def add_user_to_table(uid, login, password):
 
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
-    cur.execute('INSERT INTO users (uid, login, password, login_time, end_session_time) VALUES(?, ?, ?, ?, ?)',
-                (uid_int, login, password,
-                 current_date, end_session_time))
-    conn.commit()
-    cur.close()
-    conn.close()
+    check_q = cur.execute(f'SELECT * from users WHERE tg_id = "{tg_id}"')
+    check = check_q.fetchall()
+    if len(check) == 0:
+        cur.execute('INSERT INTO users (tg_id, uid, login, login_time, end_session_time) VALUES(?, ?, ?, ?, ?)',
+                    (tg_id, uid_int, login, current_date, end_session_time))
+        conn.commit()
+        cur.close()
+        conn.close()
+    else:
+        cur.execute(f'UPDATE users SET end_session_time = "{end_session_time}"')
+        conn.commit()
+        cur.close()
+        conn.close()
 
 
 def check_user(login):
@@ -50,16 +58,20 @@ def check_user(login):
         return True
 
 
-def check_session(user_id):
+def check_session(tg_id):
     time = datetime.datetime.now()
 
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
-    cur.execute(f'SELECT end_session_time from users WHERE id = "{user_id}"')
+    cur.execute(f'SELECT end_session_time from users WHERE tg_id = "{tg_id}"')
     end_session_time = cur.fetchall()
-
     cur.close()
     conn.close()
 
-    print(end_session_time)
+    session_time = datetime.datetime.strptime('%s' % end_session_time[0], '%Y-%m-%d %H:%M:%S.%f')
+
+    if time > session_time:
+        return False
+    else:
+        return True
 
