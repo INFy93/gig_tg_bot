@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
 import os
+from array import array
 
 from dotenv import load_dotenv
 
@@ -36,7 +37,7 @@ def add_user_to_table(tg_id, uid, login):
         cur.close()
         conn.close()
     else:
-        cur.execute(f'UPDATE users SET end_session_time = "{end_session_time}"')
+        cur.execute(f'UPDATE users SET end_session_time = "{end_session_time}" WHERE tg_id = "{tg_id}"')
         conn.commit()
         cur.close()
         conn.close()
@@ -63,15 +64,20 @@ def check_session(tg_id):
 
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
-    cur.execute(f'SELECT end_session_time from users WHERE tg_id = "{tg_id}"')
+    cur.execute(f'SELECT uid, end_session_time from users WHERE tg_id = "{tg_id}"')
     end_session_time = cur.fetchall()
     cur.close()
     conn.close()
+    data = []
 
-    session_time = datetime.datetime.strptime('%s' % end_session_time[0], '%Y-%m-%d %H:%M:%S.%f')
+    for el in end_session_time:
+        data.append(el[0])
+        data.append(el[1])
+
+    session_time = datetime.datetime.strptime('%s' % data[1], '%Y-%m-%d %H:%M:%S.%f')
 
     if time > session_time:
         return False
     else:
-        return True
+        return data
 
