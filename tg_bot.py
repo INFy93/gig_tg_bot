@@ -81,14 +81,15 @@ async def get_auth_info(message: types.Message, uid):
     user_req = requests.post(os.getenv('USER_INFO'), data=auth_user_data)
 
     data = user_req.json()
-    print(data)
+
     if data != 0:
         db.add_user_to_table(message.chat.id, data["uid"], data["id"])
         button = types.InlineKeyboardMarkup()
+        button.add(
+            types.InlineKeyboardButton("Обновить баланс", callback_data="here_my_knowledge"))
         button.add(types.InlineKeyboardButton("Пополнить счет", callback_data="i_will_have_mora"))
         button.add(types.InlineKeyboardButton("Открыть обещанный платеж", callback_data="turn_to_oblivion"))
-        button.add(
-            types.InlineKeyboardButton("Обновить информацию", callback_data="here_my_knowledge"))
+        button.add(types.InlineKeyboardButton("Обращение в техподдержку", callback_data="let_the_show_begin"))
 
         if data["credit_date"] == "0000-00-00":
             credit = "не открыт"
@@ -120,7 +121,6 @@ async def callback(call):
         is_session = db.check_session(call.message.chat.id)
         if is_session:
             await call.message.answer("Обновляю...")
-            print(is_session[0])
             await get_auth_info(call.message, is_session[0])
         else:
             auth_button = types.InlineKeyboardMarkup()
@@ -129,4 +129,4 @@ async def callback(call):
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp)
+    executor.start_polling(dp, skip_updates=False)

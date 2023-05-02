@@ -37,7 +37,8 @@ def add_user_to_table(tg_id, uid, login):
         cur.close()
         conn.close()
     else:
-        cur.execute(f'UPDATE users SET end_session_time = "{end_session_time}" WHERE tg_id = "{tg_id}"')
+        cur.execute(f'UPDATE users SET login_time = "{current_date}", end_session_time = "{end_session_time}" WHERE '
+                    f'tg_id = "{tg_id}"')
         conn.commit()
         cur.close()
         conn.close()
