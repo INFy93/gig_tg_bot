@@ -86,10 +86,10 @@ async def get_auth_info(message: types.Message, uid):
         db.add_user_to_table(message.chat.id, data["uid"], data["id"])
         button = types.InlineKeyboardMarkup()
         button.add(
-            types.InlineKeyboardButton("Обновить баланс", callback_data="here_my_knowledge"))
-        button.add(types.InlineKeyboardButton("Пополнить счет", callback_data="i_will_have_mora"))
-        button.add(types.InlineKeyboardButton("Открыть обещанный платеж", callback_data="turn_to_oblivion"))
-        button.add(types.InlineKeyboardButton("Обращение в техподдержку", callback_data="let_the_show_begin"))
+            types.InlineKeyboardButton("🔁 Обновить баланс", callback_data="here_my_knowledge"))
+        button.add(types.InlineKeyboardButton("💸 Пополнить счет", callback_data="i_will_have_mora"))
+        button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж", callback_data="turn_to_oblivion"))
+        button.add(types.InlineKeyboardButton("🚀 Обращение в техподдержку", callback_data="let_the_show_begin"))
 
         if data["credit_date"] == "0000-00-00":
             credit = "не открыт"
@@ -112,6 +112,14 @@ async def get_auth_info(message: types.Message, uid):
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
 
 
+async def loan(message: types.Message):
+    await message.answer("Функция находится в разработке")
+
+
+async def payment(message: types.Message):
+    await message.answer("Функция находится в разработке")
+
+
 @dp.callback_query_handler()
 async def callback(call):
     if call.data == "login":
@@ -126,7 +134,10 @@ async def callback(call):
             auth_button = types.InlineKeyboardMarkup()
             auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
             await call.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
-
+    if call.data == "turn_to_oblivion":
+        await loan(call.message)
+    if call.data == "i_will_have_mora":
+        await payment(call.message)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=False)
