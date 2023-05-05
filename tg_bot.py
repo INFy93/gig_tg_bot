@@ -96,10 +96,10 @@ async def get_auth_info(message: types.Message, uid):
             types.InlineKeyboardButton("🔁 Обновить баланс", callback_data="here_my_knowledge"))
         button.add(types.InlineKeyboardButton("💸 Пополнить счет", callback_data="i_will_have_mora"))
         button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж", callback_data="turn_to_oblivion"))
-        button.add(types.InlineKeyboardButton("🚀 Обращение в техподдержку",
+        button.add(types.InlineKeyboardButton("🚀 Оставить заявку",
                                               callback_data=usr_data.new(login=data["id"])
                                               ))
-
+        button.add(types.InlineKeyboardButton("🏄🏼‍♂️ Чат с оператором", url=os.getenv("JIVOSITE_LINK")))
         if data["credit_date"] == "0000-00-00":
             credit = "не открыт"
         else:
