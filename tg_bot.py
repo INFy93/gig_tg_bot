@@ -12,13 +12,12 @@ from aiogram.utils.markdown import hbold
 from aiogram.utils.callback_data import CallbackData
 
 import support
-from config import token
 from my_libs import db
 from my_libs.hepler import correct_date
 
 load_dotenv()
 
-bot = Bot(token=token, parse_mode=types.ParseMode.HTML)
+bot = Bot(token=os.getenv("TOKEN"), parse_mode=types.ParseMode.HTML)
 
 dp = Dispatcher(bot, storage=MemoryStorage())
 
