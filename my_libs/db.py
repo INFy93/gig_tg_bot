@@ -28,7 +28,7 @@ def add_user_to_table(tg_id, uid, login):
 
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
-    check_q = cur.execute(f'SELECT * from users WHERE tg_id = "{tg_id}"')
+    check_q = cur.execute(f'SELECT * from users WHERE tg_id = "{tg_id}" AND login = "{login}"')
     check = check_q.fetchall()
     if len(check) == 0:
         cur.execute('INSERT INTO users (tg_id, uid, login, login_time, end_session_time) VALUES(?, ?, ?, ?, ?)',
@@ -60,17 +60,17 @@ def check_user(login):
         return True
 
 
-def check_session(tg_id):
+def check_session(tg_id, uid):
     time = datetime.datetime.now()
 
     conn = sqlite3.connect("users.sqlite")
     cur = conn.cursor()
-    cur.execute(f'SELECT uid, end_session_time from users WHERE tg_id = "{tg_id}"')
+    cur.execute(f'SELECT uid, end_session_time from users WHERE tg_id = "{tg_id}" AND uid = "{uid}"')
     end_session_time = cur.fetchall()
     cur.close()
     conn.close()
     data = []
-
+    print(uid)
     for el in end_session_time:
         data.append(el[0])
         data.append(el[1])

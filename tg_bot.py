@@ -12,6 +12,7 @@ from aiogram.utils.markdown import hbold
 from aiogram.utils.callback_data import CallbackData
 
 import support
+import user_credit
 from my_libs import db
 from my_libs.hepler import correct_date
 
@@ -29,15 +30,17 @@ class UserData(StatesGroup):
 
 class UserSupportQuery(StatesGroup):
     user_query = State()
+    user_phone = State()
 
 
-usr_data = CallbackData('usr_data', 'login')
+usr_data = CallbackData('usr_data', 'login', 'uid')
+usr_action_data = CallbackData('usr_action', 'action', 'uid')
 
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
     button = types.InlineKeyboardMarkup()
-    button.add(types.InlineKeyboardButton("Ввести учетные данные", callback_data="login"))
+    button.add(types.InlineKeyboardButton("Ввести учетные данные", callback_data=usr_action_data.new(action="login", uid=0)))
     await message.answer("Добро пожаловать! Чтобы узнать состояние Вашего счета, нажмите на кнопку ниже.",
                          reply_markup=button)
 
@@ -92,11 +95,16 @@ async def get_auth_info(message: types.Message, uid):
         db.add_user_to_table(message.chat.id, data["uid"], data["id"])
         button = types.InlineKeyboardMarkup()
         button.add(
-            types.InlineKeyboardButton("🔁 Обновить баланс", callback_data="here_my_knowledge"))
-        button.add(types.InlineKeyboardButton("💸 Пополнить счет", callback_data="i_will_have_mora"))
-        button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж", callback_data="turn_to_oblivion"))
+            types.InlineKeyboardButton("🔁 Обновить баланс",
+                                       callback_data=usr_action_data.new(action="here_my_knowledge", uid=data["uid"])))
+        button.add(types.InlineKeyboardButton("💸 Пополнить счет",
+                                              callback_data=usr_action_data.new(action="i_will_have_mora",
+                                                                                uid=data["uid"])))
+        button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж",
+                                              callback_data=usr_action_data.new(action="turn_to_oblivion",
+                                                                                uid=data["uid"])))
         button.add(types.InlineKeyboardButton("🚀 Оставить заявку",
-                                              callback_data=usr_data.new(login=data["id"])
+                                              callback_data=usr_data.new(login=data["id"], uid=data["uid"])
                                               ))
         button.add(types.InlineKeyboardButton("🏄🏼‍♂️ Чат с оператором", url=os.getenv("JIVOSITE_LINK")))
         if data["credit_date"] == "0000-00-00":
@@ -120,8 +128,8 @@ async def get_auth_info(message: types.Message, uid):
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
 
 
-async def loan(message: types.Message):
-    await message.answer("Функция находится в разработке")
+async def loan(message: types.Message, uid):
+    await user_credit.open_credit(uid, message)
 
 
 async def payment(message: types.Message):
@@ -130,7 +138,7 @@ async def payment(message: types.Message):
 
 @dp.callback_query_handler(usr_data.filter(), state=None)
 async def vote_up_cb_handler(query: types.CallbackQuery, callback_data: dict, state=FSMContext):
-    is_session = db.check_session(query.message.chat.id)
+    is_session = db.check_session(query.message.chat.id, callback_data["uid"])
     if is_session:
         await UserSupportQuery.user_query.set()
         await query.message.answer("Опишите вашу проблему:")
@@ -144,33 +152,48 @@ async def vote_up_cb_handler(query: types.CallbackQuery, callback_data: dict, st
 
 
 @dp.message_handler(state=UserSupportQuery.user_query)
-async def transfer_data(message: types.Message, state=FSMContext):
+async def set_phone(message: types.Message, state=FSMContext):
     async with state.proxy() as data:
         data["problem"] = message.text
+    await UserSupportQuery.next()
+    await message.answer("Введите ваш номер телефона для связи:")
+    # await support.store_issue_to_redmine(data["login"], data["problem"], message)
+
+
+@dp.message_handler(state=UserSupportQuery.user_phone)
+async def transfer_data(message: types.Message, state=FSMContext):
+    async with state.proxy() as data:
+        data["phone"] = message.text
     await state.finish()
+    await support.store_issue_to_redmine(data["login"], data["phone"], data["problem"], message)
 
-    await support.store_issue_to_redmine(data["login"], data["problem"], message)
 
-
-@dp.callback_query_handler()
-async def callback(call):
-    if call.data == "login":
+@dp.callback_query_handler(usr_action_data.filter())
+async def _(query: types.CallbackQuery, callback_data: dict):
+    action = callback_data['action']
+    if action == "login":
         db.connect()
-        await start_logging_in(call.message)
-    if call.data == "here_my_knowledge":
-        is_session = db.check_session(call.message.chat.id)
+        await start_logging_in(query.message)
+    elif action == "here_my_knowledge":
+        is_session = db.check_session(query.message.chat.id, callback_data["uid"])
         if is_session:
-            await call.message.answer("Обновляю...")
-            await get_auth_info(call.message, is_session[0])
+            await query.message.answer("Обновляю...")
+            await get_auth_info(query.message, is_session[0])
         else:
             auth_button = types.InlineKeyboardMarkup()
             auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
-            await call.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
-    if call.data == "turn_to_oblivion":
-        await loan(call.message)
-    if call.data == "i_will_have_mora":
-        await payment(call.message)
-
+            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
+    elif action == "turn_to_oblivion":
+        is_session = db.check_session(query.message.chat.id, callback_data["uid"])
+        if is_session:
+            await loan(query.message, callback_data["uid"])
+        else:
+            auth_button = types.InlineKeyboardMarkup()
+            auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
+            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
+                                       reply_markup=auth_button)
+    elif action == "i_will_have_mora":
+        await payment(query.message)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=False)

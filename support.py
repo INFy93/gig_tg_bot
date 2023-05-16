@@ -11,10 +11,10 @@ load_dotenv()
 redmine = Redmine(os.getenv("REDMINE_URL"), key=os.getenv("REDMINE_API"))
 
 
-async def store_issue_to_redmine(login, problem, message: types.Message):
+async def store_issue_to_redmine(login, phone, problem, message: types.Message):
     issue = redmine.issue.new()
     issue.project_id = 'montazh'
-    issue.subject = f'Обращение в техподдержку: {login}'
+    issue.subject = f'Обращение в техподдержку: {login} ({phone})'
     issue.description = problem
     issue.assigned_to_id = 84  # потом можно сменить
     issue.save()
