@@ -75,7 +75,8 @@ async def get_info(message: types.Message, state=FSMContext):
 
     if login_req.text == "0":
         fail_button = types.InlineKeyboardMarkup()
-        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз", callback_data="login"))
+        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
+                                                   callback_data=usr_action_data.new(action="login", uid=0)))
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
     else:
         await get_auth_info(message, login_req.text)
@@ -120,11 +121,13 @@ async def get_auth_info(message: types.Message, uid):
 
     elif data == -1:
         fail_button = types.InlineKeyboardMarkup()
-        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз", callback_data="login"))
+        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
+                                                   callback_data=usr_action_data.new(action="login", uid=0)))
         await message.answer("Ошибка параметров", reply_markup=fail_button)
     else:
         fail_button = types.InlineKeyboardMarkup()
-        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз", callback_data="login"))
+        fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
+                                                   callback_data=usr_action_data.new(action="login", uid=0)))
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
 
 
@@ -147,7 +150,8 @@ async def vote_up_cb_handler(query: types.CallbackQuery, callback_data: dict, st
             data["uid"] = is_session[0]
     else:
         auth_button = types.InlineKeyboardMarkup()
-        auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
+        auth_button.add(types.InlineKeyboardButton("Авторизоваться",
+                                                   callback_data=usr_action_data.new(action="login", uid=0)))
         await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
 
 
@@ -181,7 +185,8 @@ async def _(query: types.CallbackQuery, callback_data: dict):
             await get_auth_info(query.message, is_session[0])
         else:
             auth_button = types.InlineKeyboardMarkup()
-            auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
+            auth_button.add(types.InlineKeyboardButton("Авторизоваться",
+                                                       callback_data=usr_action_data.new(action="login", uid=0)))
             await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
     elif action == "turn_to_oblivion":
         is_session = db.check_session(query.message.chat.id, callback_data["uid"])
@@ -189,7 +194,8 @@ async def _(query: types.CallbackQuery, callback_data: dict):
             await loan(query.message, callback_data["uid"])
         else:
             auth_button = types.InlineKeyboardMarkup()
-            auth_button.add(types.InlineKeyboardButton("Авторизоваться", callback_data="login"))
+            auth_button.add(types.InlineKeyboardButton("Авторизоваться",
+                                                       callback_data=usr_action_data.new(action="login", uid=0)))
             await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
                                        reply_markup=auth_button)
     elif action == "i_will_have_mora":

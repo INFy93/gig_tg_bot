@@ -70,7 +70,7 @@ def check_session(tg_id, uid):
     cur.close()
     conn.close()
     data = []
-    print(uid)
+
     for el in end_session_time:
         data.append(el[0])
         data.append(el[1])
