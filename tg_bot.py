@@ -12,6 +12,7 @@ from aiogram.utils.markdown import hbold
 from aiogram.utils.callback_data import CallbackData
 
 import support
+from menus import main_menu
 import user_credit
 from my_libs import db
 from my_libs.hepler import correct_date
@@ -34,13 +35,15 @@ class UserSupportQuery(StatesGroup):
 
 
 usr_data = CallbackData('usr_data', 'login', 'uid')
-usr_action_data = CallbackData('usr_action', 'action', 'uid')
+usr_action_data = CallbackData('usr_action', 'action', 'uid', 'login')
 
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
     button = types.InlineKeyboardMarkup()
-    button.add(types.InlineKeyboardButton("Ввести учетные данные", callback_data=usr_action_data.new(action="login", uid=0)))
+    button.add(
+        types.InlineKeyboardButton("Ввести учетные данные", callback_data=usr_action_data.new(action="login", uid=0,
+                                                                                              login='')))
     await message.answer("Добро пожаловать! Чтобы узнать состояние Вашего счета, нажмите на кнопку ниже.",
                          reply_markup=button)
 
@@ -71,15 +74,17 @@ async def get_info(message: types.Message, state=FSMContext):
         'password': data["password"]
     }
 
-    login_req = requests.post(os.getenv('USER_CHECK'), data=login_data)
+    login_req = requests.post(os.getenv('USER_AUTH'), data=login_data)
 
-    if login_req.text == "0":
+    answer = login_req.json()
+
+    if answer['status'] == 0:
         fail_button = types.InlineKeyboardMarkup()
         fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
-                                                   callback_data=usr_action_data.new(action="login", uid=0)))
+                                                   callback_data=usr_action_data.new(action="login", uid=0, login='')))
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
     else:
-        await get_auth_info(message, login_req.text)
+        await get_auth_info(message, answer['uid'])
 
 
 async def get_auth_info(message: types.Message, uid):
@@ -90,44 +95,41 @@ async def get_auth_info(message: types.Message, uid):
 
     user_req = requests.post(os.getenv('USER_INFO'), data=auth_user_data)
 
-    data = user_req.json()
+    user_answer = user_req.json()
 
-    if data != 0:
-        db.add_user_to_table(message.chat.id, data["uid"], data["id"])
+    user_data = user_answer['user_info']
+    user_status = user_answer['status']
+
+    if user_status != 0:
+        db.add_user_to_table(message.chat.id, user_data["uid"], user_data["id"])
         button = types.InlineKeyboardMarkup()
-        button.add(
-            types.InlineKeyboardButton("🔁 Обновить баланс",
-                                       callback_data=usr_action_data.new(action="here_my_knowledge", uid=data["uid"])))
-        button.add(types.InlineKeyboardButton("💸 Пополнить счет",
-                                              callback_data=usr_action_data.new(action="i_will_have_mora",
-                                                                                uid=data["uid"])))
-        button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж",
-                                              callback_data=usr_action_data.new(action="turn_to_oblivion",
-                                                                                uid=data["uid"])))
-        button.add(types.InlineKeyboardButton("🚀 Оставить заявку",
-                                              callback_data=usr_data.new(login=data["id"], uid=data["uid"])
-                                              ))
-        button.add(types.InlineKeyboardButton("🏄🏼‍♂️ Чат с оператором", url=os.getenv("JIVOSITE_LINK")))
-        if data["credit_date"] == "0000-00-00":
+        button.add(types.InlineKeyboardButton("🔁 Финансовые операции",
+                                              callback_data=usr_action_data.new(action="finance", uid=user_data["uid"],
+                                                                                login='')))
+        button.add(types.InlineKeyboardButton("🚀 Техподдержка",
+                                              callback_data=usr_action_data.new(action="support",
+                                                                                uid=user_data["uid"], login=user_data["id"])))
+        if user_data["credit_date"] == "0000-00-00":
             credit = "не открыт"
         else:
-            credit = data["credit_date"]
+            credit = user_data["credit_date"]
 
         await message.answer(
-            f'{hbold("Абонент")}: {data["fio"]}\n{hbold("Логин")}: {data["id"]}     {hbold("UID")}: {data["uid"]}\n'
-            f'{hbold("Дата окончания")}: {correct_date(data["expire"])}\n'
-            f'{hbold("Остаток на счете")}: {data["deposit"]} руб.\n{hbold("Тариф")}: {data["tariff"]}\n'
+            f'{hbold("Абонент")}: {user_data["fio"]}\n{hbold("Логин")}: {user_data["id"]}\n'
+            f'{hbold("Лицевой счет (UID)")}: {user_data["uid"]}\n'
+            f'{hbold("Дата окончания")}: {correct_date(user_data["expire"])}\n'
+            f'{hbold("Остаток на счете")}: {user_data["deposit"]} руб.\n{hbold("Тариф")}: {user_data["tariff"]}\n'
             f'{hbold("Обещанный платеж")}: {credit}', reply_markup=button)
 
-    elif data == -1:
+    elif user_status == -1:
         fail_button = types.InlineKeyboardMarkup()
         fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
-                                                   callback_data=usr_action_data.new(action="login", uid=0)))
+                                                   callback_data=usr_action_data.new(action="login", uid=0, login='')))
         await message.answer("Ошибка параметров", reply_markup=fail_button)
     else:
         fail_button = types.InlineKeyboardMarkup()
         fail_button.add(types.InlineKeyboardButton("Попробовать еще раз",
-                                                   callback_data=usr_action_data.new(action="login", uid=0)))
+                                                   callback_data=usr_action_data.new(action="login", uid=0, login='')))
         await message.answer("Неправильный логин или пароль.", reply_markup=fail_button)
 
 
@@ -151,7 +153,7 @@ async def vote_up_cb_handler(query: types.CallbackQuery, callback_data: dict, st
     else:
         auth_button = types.InlineKeyboardMarkup()
         auth_button.add(types.InlineKeyboardButton("Авторизоваться",
-                                                   callback_data=usr_action_data.new(action="login", uid=0)))
+                                                   callback_data=usr_action_data.new(action="login", uid=0, login='')))
         await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
 
 
@@ -175,31 +177,33 @@ async def transfer_data(message: types.Message, state=FSMContext):
 @dp.callback_query_handler(usr_action_data.filter())
 async def _(query: types.CallbackQuery, callback_data: dict):
     action = callback_data['action']
+    is_session = ''
+    if action != "login":
+        is_session = db.check_session(query.message.chat.id, callback_data["uid"])
     if action == "login":
         db.connect()
         await start_logging_in(query.message)
-    elif action == "here_my_knowledge":
-        is_session = db.check_session(query.message.chat.id, callback_data["uid"])
+    elif action == "finance":
         if is_session:
-            await query.message.answer("Обновляю...")
-            await get_auth_info(query.message, is_session[0])
+            await main_menu.show_finance_menu(callback_data["uid"], query.message)
         else:
             auth_button = types.InlineKeyboardMarkup()
             auth_button.add(types.InlineKeyboardButton("Авторизоваться",
-                                                       callback_data=usr_action_data.new(action="login", uid=0)))
+                                                       callback_data=usr_action_data.new(action="login", uid=0,
+                                                                                         login='')))
             await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
-    elif action == "turn_to_oblivion":
-        is_session = db.check_session(query.message.chat.id, callback_data["uid"])
+    elif action == "support":
         if is_session:
-            await loan(query.message, callback_data["uid"])
+            await main_menu.show_support_menu(callback_data["uid"], callback_data["login"], query.message)
         else:
             auth_button = types.InlineKeyboardMarkup()
             auth_button.add(types.InlineKeyboardButton("Авторизоваться",
-                                                       callback_data=usr_action_data.new(action="login", uid=0)))
-            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
-                                       reply_markup=auth_button)
-    elif action == "i_will_have_mora":
-        await payment(query.message)
+                                                       callback_data=usr_action_data.new(action="login", uid=0,
+                                                                                         login='')))
+            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
+    await query.answer()
+
 
 if __name__ == '__main__':
+    from menus import dp
     executor.start_polling(dp, skip_updates=False)
