@@ -21,8 +21,7 @@ async def show_finance_menu(uid, message: types.Message):
         types.InlineKeyboardButton("🔁 Обновить баланс",
                                    callback_data=menu_action_data.new(action="here_my_knowledge", uid=uid)))
     button.add(types.InlineKeyboardButton("💸 Пополнить счет",
-                                          callback_data=menu_action_data.new(action="i_will_have_mora",
-                                                                             uid=uid)))
+                                          url=os.getenv("PAYMENT_LINK")))
     button.add(types.InlineKeyboardButton("🗓 Открыть обещанный платеж",
                                           callback_data=menu_action_data.new(action="turn_to_oblivion",
                                                                              uid=uid)))
