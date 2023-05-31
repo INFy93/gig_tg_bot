@@ -101,6 +101,7 @@ async def get_auth_info(message: types.Message, uid):
     user_status = user_answer['status']
 
     if user_status != 0:
+        db.connect()
         db.add_user_to_table(message.chat.id, user_data["uid"], user_data["id"])
         button = types.InlineKeyboardMarkup()
         button.add(types.InlineKeyboardButton("🔁 Финансовые операции",
@@ -108,7 +109,8 @@ async def get_auth_info(message: types.Message, uid):
                                                                                 login='')))
         button.add(types.InlineKeyboardButton("🚀 Техподдержка",
                                               callback_data=usr_action_data.new(action="support",
-                                                                                uid=user_data["uid"], login=user_data["id"])))
+                                                                                uid=user_data["uid"],
+                                                                                login=user_data["id"])))
         if user_data["credit_date"] == "0000-00-00":
             credit = "не открыт"
         else:
@@ -163,7 +165,9 @@ async def set_phone(message: types.Message, state=FSMContext):
         data["problem"] = message.text
     await UserSupportQuery.next()
     await message.answer("Введите ваш номер телефона для связи:")
-    # await support.store_issue_to_redmine(data["login"], data["problem"], message)
+
+
+# await support.store_issue_to_redmine(data["login"], data["problem"], message)
 
 
 @dp.message_handler(state=UserSupportQuery.user_phone)
@@ -191,7 +195,8 @@ async def _(query: types.CallbackQuery, callback_data: dict):
             auth_button.add(types.InlineKeyboardButton("Авторизоваться",
                                                        callback_data=usr_action_data.new(action="login", uid=0,
                                                                                          login='')))
-            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
+            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
+                                       reply_markup=auth_button)
     elif action == "support":
         if is_session:
             await main_menu.show_support_menu(callback_data["uid"], callback_data["login"], query.message)
@@ -200,10 +205,12 @@ async def _(query: types.CallbackQuery, callback_data: dict):
             auth_button.add(types.InlineKeyboardButton("Авторизоваться",
                                                        callback_data=usr_action_data.new(action="login", uid=0,
                                                                                          login='')))
-            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.", reply_markup=auth_button)
+            await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
+                                       reply_markup=auth_button)
     await query.answer()
 
 
 if __name__ == '__main__':
     from menus import dp
+
     executor.start_polling(dp, skip_updates=False)

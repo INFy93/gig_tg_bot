@@ -81,4 +81,3 @@ def check_session(tg_id, uid):
         return False
     else:
         return data
-
