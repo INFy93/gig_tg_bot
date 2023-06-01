@@ -46,12 +46,20 @@ async def show_support_menu(uid, login, message: types.Message):
 @dp.callback_query_handler(menu_action_data.filter())
 async def _(query: types.CallbackQuery, callback_data: dict):
     action = callback_data["action"]
-
-    if action == "here_my_knowledge":
-        await tg_bot.get_auth_info(query.message, callback_data["uid"])
-    elif action == "turn_to_oblivion":
-        await tg_bot.loan(query.message, callback_data["uid"])
-    elif action == "i_will_have_mora":
-        await tg_bot.payment(query.message)
+    is_session = db.check_session(query.message.chat.id, callback_data["uid"])
+    if is_session:
+        if action == "here_my_knowledge":
+            await tg_bot.get_auth_info(query.message, callback_data["uid"])
+        elif action == "turn_to_oblivion":
+            await tg_bot.loan(query.message, callback_data["uid"])
+        elif action == "i_will_have_mora":
+            await tg_bot.payment(query.message)
+    else:
+        auth_button = types.InlineKeyboardMarkup()
+        auth_button.add(types.InlineKeyboardButton("Авторизоваться",
+                                                   callback_data=tg_bot.usr_action_data.new(action="login", uid=0,
+                                                                                     login='')))
+        await query.message.answer("Ваша сессия истекла! Пожалуйста, авторизуйтесь снова.",
+                                   reply_markup=auth_button)
 
     await query.answer()

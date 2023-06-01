@@ -18,4 +18,4 @@ async def store_issue_to_redmine(login, phone, problem, message: types.Message):
     issue.assigned_to_id = 84  # потом можно сменить
     issue.save()
 
-    await message.answer("Ваше обращение успешно отправлено! Ждите, вам перезвонят (но это не точно...)")
+    await message.answer("Ваше обращение будет рассмотрено службой технической поддержки.")
